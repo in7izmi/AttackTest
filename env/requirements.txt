@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+passlib
+openpyxl
+pandas
+numpy
+ipykernel
