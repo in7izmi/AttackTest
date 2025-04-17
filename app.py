@@ -97,5 +97,17 @@ def transactions():
     tx_list = Transaction.query.filter_by(user_id=user.id).order_by(Transaction.date.desc()).all()
     return render_template('transactions.html', user=user, transactions=tx_list)
 
+
+# Add this to app.py
+@app.route('/admin_panel')
+def admin_panel():
+    # VULNERABLE: Missing authentication check
+    # Should check if user is logged in AND is an admin
+
+    # Get all users in the system
+    all_users = User.query.all()
+    return render_template('admin_panel.html', users=all_users)
+
+
 if __name__ == '__main__':
     app.run(debug=True)
