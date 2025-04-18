@@ -99,7 +99,7 @@ def transactions():
 
 
 # Add this to app.py
-@app.route('/admin_panel')
+@app.route('/admin')
 def admin_panel():
     # VULNERABLE: Missing authentication check
     # Should check if user is logged in AND is an admin
@@ -107,6 +107,55 @@ def admin_panel():
     # Get all users in the system
     all_users = User.query.all()
     return render_template('admin_panel.html', users=all_users)
+
+
+# Add these routes to app.py
+
+# Add these routes to app.py
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    # VULNERABLE: No proper authorization check
+    # Just checks if a user is logged in, not if they should have admin access
+    if 'user_id' not in session:
+        flash("Please log in first.")
+        return redirect(url_for('login'))
+
+    # Get system statistics
+    user_count = User.query.count()
+    transaction_count = Transaction.query.count()
+
+    # Calculate some financial stats
+    total_deposits = db.session.query(db.func.sum(Transaction.deposit_amt)).filter(
+        Transaction.deposit_amt != None).scalar() or 0
+    total_withdrawals = db.session.query(db.func.sum(Transaction.withdrawal_amt)).filter(
+        Transaction.withdrawal_amt != None).scalar() or 0
+
+    return render_template('admin/dashboard.html',
+                           user_count=user_count,
+                           transaction_count=transaction_count,
+                           total_deposits=total_deposits,
+                           total_withdrawals=total_withdrawals)
+
+
+
+@app.route('/account/<int:account_id>')
+def account_details(account_id):
+    if 'user_id' not in session:
+        flash("Please log in first.")
+        return redirect(url_for('login'))
+
+    # VULNERABLE: No authorization check to verify the logged-in user
+    # has access to the requested account
+    account = User.query.get(account_id)
+
+    if not account:
+        flash("Account not found.")
+        return redirect(url_for('dashboard'))
+
+    transactions = Transaction.query.filter_by(user_id=account_id).order_by(Transaction.date.desc()).limit(10).all()
+
+    return render_template('account_details.html', account=account, transactions=transactions)
 
 
 if __name__ == '__main__':
