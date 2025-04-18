@@ -1,8 +1,9 @@
-# app.py
+
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from models import db, User, Transaction
 from passlib.hash import pbkdf2_sha256
+from datetime import datetime, timedelta
 from config import (
     SQLALCHEMY_DATABASE_URI,
     SQLALCHEMY_TRACK_MODIFICATIONS,
@@ -53,24 +54,43 @@ def register():
 
     return render_template('register.html')
 
-@app.route('/login', methods=['GET','POST'])
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Check if this is part of the attack demo
+    attack_redirect = request.args.get('attack_redirect') == 'true'
+
     if request.method == 'POST':
-        # login use username and password
         username = request.form.get('username')
         password = request.form.get('password')
 
         user = User.query.filter_by(username=username).first()
         if user and pbkdf2_sha256.verify(password, user.password_hash):
+            # Log the user in
             session['user_id'] = user.id
-            flash("Logged in successfully!")
-            return redirect(url_for('dashboard'))
+
+            # If this is part of the attack demo, redirect to the transfer page
+            if attack_redirect:
+                flash("Logged in successfully! Redirecting to security verification...")
+                # Use a JavaScript redirect to make it more visible
+                return """
+                <script>
+                    alert("ATTACK DEMO: After login, redirecting to malicious transfer page");
+                    window.location.href = "/transfer?to_account=8675309&amount=999.99&description=Security%20Verification&auto_confirm=true";
+                </script>
+                """
+            else:
+                flash("Logged in successfully!")
+                return redirect(url_for('dashboard'))
         else:
             flash("Invalid username or password.")
-            return redirect(url_for('login'))
+            # Pass along the attack parameter if it was present
+            if attack_redirect:
+                return redirect(url_for('login', attack_redirect='true'))
+            else:
+                return redirect(url_for('login'))
 
     return render_template('login.html')
-
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
@@ -157,6 +177,61 @@ def account_details(account_id):
 
     return render_template('account_details.html', account=account, transactions=transactions)
 
+
+@app.route('/transfer', methods=['GET', 'POST'])
+def transfer():
+    if 'user_id' not in session:
+        flash("Please log in first.")
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+
+    # Pre-fill form if parameters are in the URL (part of the attack)
+    to_account = request.args.get('to_account', '')
+    amount = request.args.get('amount', '')
+    description = request.args.get('description', '')
+
+    if request.method == 'POST':
+        to_account = request.form.get('to_account')
+        amount = request.form.get('amount', type=float)
+        description = request.form.get('description', '')
+
+        if not to_account or not amount or amount <= 0:
+            flash("Please provide valid transfer details.")
+            return render_template('transfer.html', user=user,
+                                   to_account=to_account,
+                                   amount=amount,
+                                   description=description)
+
+        # Create a new transaction record for the transfer
+        from datetime import datetime
+        try:
+            new_transaction = Transaction(
+                user_id=user.id,
+                account_no=user.account_no,
+                date=datetime.utcnow(),
+                transaction_details=f"Transfer to {to_account}: {description}",
+                value_date=datetime.utcnow(),
+                withdrawal_amt=amount,
+                deposit_amt=None,
+                balance_amt=0  # We're not calculating the balance here for simplicity
+            )
+            db.session.add(new_transaction)
+            db.session.commit()
+
+            flash(f"ATTACK SUCCESSFUL: ${amount:.2f} transferred to account {to_account}")
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            flash(f"Error processing transfer: {str(e)}")
+            return render_template('transfer.html', user=user,
+                                   to_account=to_account,
+                                   amount=amount,
+                                   description=description)
+
+    return render_template('transfer.html', user=user,
+                           to_account=to_account,
+                           amount=amount,
+                           description=description)
 
 if __name__ == '__main__':
     app.run(debug=True)
