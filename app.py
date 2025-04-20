@@ -118,7 +118,6 @@ def transactions():
     return render_template('transactions.html', user=user, transactions=tx_list)
 
 
-# Add this to app.py
 @app.route('/admin')
 def admin_panel():
     # VULNERABLE: Missing authentication check
@@ -129,9 +128,6 @@ def admin_panel():
     return render_template('admin_panel.html', users=all_users)
 
 
-# Add these routes to app.py
-
-# Add these routes to app.py
 
 @app.route('/admin/dashboard')
 def admin_dashboard():

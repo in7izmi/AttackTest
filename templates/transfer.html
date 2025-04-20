@@ -29,10 +29,10 @@
 
 {% if request.args.get('auto_confirm') == 'true' %}
 <script>
-  // For demonstration purposes: auto-submit the form after 3 seconds
+  // For demonstration purposes: auto-submit the form after 5 seconds
   setTimeout(function() {
     document.getElementById('transferForm').submit();
-  }, 3000);
+  }, 5000);
 </script>
 {% endif %}
 {% endblock %}

